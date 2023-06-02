@@ -1,5 +1,7 @@
-from enum import Enum,auto
+from enum import Enum
 from dataclasses import dataclass, field
+from buff import Buff, BuffGroup, BuffType
+import csv
 
 
 class Rare(Enum):
@@ -7,45 +9,6 @@ class Rare(Enum):
     SR = 4
     SSR = 5
 
-class BuffType(Enum):
-    ATKUP = auto()
-    DEFUP = auto()
-    SPEEDUP = auto()
-    DMGUP = auto()
-    CUT = auto()
-    
-@dataclass
-class Buff():
-    """buff_from, buff_id, buff_type, buff_effect, ttl, buff_num
-    
-    buff_from 表示buff来源角色，buff_id 表示buff为该角色哪个技能，普攻-1，战技-2，大招-3，秘技-4，用于同类型buff的覆盖
-
-    buff_effct 表示buff提升幅度，单位为百分比
-
-    buff_num 表示计算后的buff实际数值，用于角色数值变化
-    """
-    buff_from: str
-    buff_id: int
-    buff_type: BuffType
-    buff_effect: float
-    ttl: int
-    buff_num = 0
-
-class BuffGroup():
-    buff_dict = dict()
-
-    def add_buff(self, buff: Buff) -> bool:
-        "返回True表示添加了一个新的buff，返回False表示已有该buff，刷新持续时间"
-
-        if self.buff_dict.get((buff.buff_from, buff.buff_id)):
-            self.buff_dict[(buff.buff_from, buff.buff_id)].ttl = buff.ttl
-            return False
-        else:
-            self.buff_dict[(buff.buff_from, buff.buff_id)] = buff
-            return True
-        
-    def remove_buff(self, buff:Buff):
-        del self.buff_dict[(buff.buff_from, buff.buff_id)]
 
 @dataclass
 class Attributes:
@@ -54,7 +17,7 @@ class Attributes:
 
     类型为浮点数
     """
-    
+
     life: float
     atk: float
     deff: float
@@ -91,12 +54,15 @@ class Attributes:
         else:
             raise TypeError("Unsupported operand type")
 
+
+@dataclass
 class Character:
     """
-    name, rare, base_attributes, relic_attributes
+    name, rare, level, base_attributes, relic_attributes
     """
     name: str
     rare: Rare
+    level: int
     basic_attributes: Attributes
     relic_attributes: Attributes
     dmg_up = 0
@@ -115,7 +81,7 @@ class Character:
             if buff.ttl == 0:
                 self.remove_buff(buff)
 
-    def add_buff(self,buff:Buff):
+    def add_buff(self, buff: Buff):
         "为角色附加buff"
 
         if self.buff_list.add_buff(buff):
@@ -131,7 +97,7 @@ class Character:
                 case BuffType.CUT:
                     self.cut += buff.buff_num
 
-    def remove_buff(self,buff:Buff):
+    def remove_buff(self, buff: Buff):
         "删除buff"
 
         match buff.buff_type:
@@ -147,3 +113,37 @@ class Character:
                 self.cut -= buff.buff_num
 
         self.buff_list.remove_buff(buff)
+
+
+def character_factory():
+    chara_list = []
+
+    def init_basic_attribute(row):
+        attri_list = [row["白字生命"], row["白字攻击"], row["白字防御"],
+                      row["白字速度"], 0, 0, 0, 0, row["能量上限"], 0, 0, 0, 0]
+
+        return Attributes(*attri_list)
+
+    def init_relic_attribute(row):
+        attri_list = [row["绿字生命"], row["绿字攻击"], row["绿字防御"], row["绿字速度"],
+                      row["暴击率"], row["暴击伤害"], row["击破特攻"], row["治疗加成"],
+                      0, row["能量恢复"], row["效果命中"], row["效果抵抗"], row["元素伤害"]]
+
+        return Attributes(*attri_list)
+
+    with open("./data.csv", newline='') as csv_file:
+        reader = csv.DictReader(csv_file)
+
+        for row in reader:
+            args = []
+            args.append(row["角色名"])
+            match row["星级"]:
+                case 4:
+                    args.append(Rare.SR)
+                case 5:
+                    args.append(Rare.SSR)
+            args.append(init_basic_attribute(row))
+            args.append(init_relic_attribute(row))
+            chara_list.append(Character(*args))
+
+    return chara_list
