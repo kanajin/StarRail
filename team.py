@@ -24,5 +24,6 @@ def team_factory():
 
 
 class Team():
-    chara_set: set(Character)
-    cost: int
+    def __init__(self):
+        self.chara_set = set(Character)
+        self.cost = 0

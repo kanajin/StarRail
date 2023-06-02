@@ -65,12 +65,12 @@ class Character:
     level: int
     basic_attributes: Attributes
     relic_attributes: Attributes
-    dmg_up = 0
-    cut = 0
-    buff_list = BuffGroup()
     attributes: Attributes = field(init=False)
 
     def __post_init__(self):
+        self.dmg_up = 0
+        self.cut = 0
+        self.buff_list = BuffGroup()
         self.attributes = self.basic_attributes + self.relic_attributes
 
     def update_buff(self):

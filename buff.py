@@ -29,7 +29,8 @@ class Buff():
 
 
 class BuffGroup():
-    buff_dict = dict()
+    def __init__(self):
+        self.buff_dict = dict()
 
     def add_buff(self, buff: Buff) -> bool:
         "返回True表示添加了一个新的buff，返回False表示已有该buff，刷新持续时间"
