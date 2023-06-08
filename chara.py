@@ -1,149 +1,100 @@
-from enum import Enum
-from dataclasses import dataclass, field
-from buff import Buff, BuffGroup, BuffType
+from dataclasses import dataclass,field
+from enum_classes import AttributeID,CharacterID
 import csv
-
-
-class Rare(Enum):
-    R = 3
-    SR = 4
-    SSR = 5
+from buff import BuffGroup
 
 
 @dataclass
-class Attributes:
-    """
-    life, atk, deff, speed, crit_rate, crit_dmg, break_eff, heal_eff, energy, energy_recover, hit, resis, ele_dmg
+class Attribute:
+    id: AttributeID
+    value: int
+    
 
-    类型为浮点数
-    """
+class AttributeList:
+    def __init__(self):
+        self.attributes = {}
 
-    life: float
-    atk: float
-    deff: float
-    speed: float
-    crit_rate: float
-    crit_dmg: float
-    break_eff: float
-    heal_eff: float
-    energy: float
-    energy_recover: float
-    hit: float
-    resis: float
-    ele_dmg: float
-
-    def __add__(self, other):
-        if isinstance(other, Attributes):
-            new_life = self.life + other.life
-            new_atk = self.atk + other.atk
-            new_deff = self.deff + other.deff
-            new_speed = self.speed + other.speed
-            new_crit_rate = self.crit_rate + other.crit_rate
-            new_crit_dmg = self.crit_dmg + other.crit_dmg
-            new_break_eff = self.break_eff + other.break_eff
-            new_heal_eff = self.heal_eff + other.heal_eff
-            new_energy = self.energy + other.energy
-            new_energy_recover = self.energy_recover + other.energy_recover
-            new_hit = self.hit + other.hit
-            new_resis = self.resis + other.resis
-            new_ele_dmg = self.ele_dmg + other.ele_dmg
-
-            return Attributes(new_life, new_atk, new_deff, new_speed, new_crit_rate, new_crit_dmg,
-                              new_break_eff, new_heal_eff, new_energy, new_energy_recover, new_hit,
-                              new_resis, new_ele_dmg)
-        else:
-            raise TypeError("Unsupported operand type")
+        self.attributes[AttributeID.LEVEL] = Attribute(AttributeID.LEVEL, 0) # 等级
+        self.attributes[AttributeID.BASE_HEALTH] = Attribute(AttributeID.BASE_HEALTH, 0)  # 基础生命值
+        self.attributes[AttributeID.PERTH_HEALTH] = Attribute(AttributeID.PERTH_HEALTH, 0)  # 百分比生命值
+        self.attributes[AttributeID.EXTRA_HEALTH] = Attribute(AttributeID.EXTRA_HEALTH, 0)  # 额外生命值
+        self.attributes[AttributeID.BASE_ATTACK] = Attribute(AttributeID.BASE_ATTACK, 0)  # 基础攻击力
+        self.attributes[AttributeID.PERTH_ATTACK] = Attribute(AttributeID.PERTH_ATTACK, 0)  # 百分比攻击力
+        self.attributes[AttributeID.EXTRA_ATTACK] = Attribute(AttributeID.EXTRA_ATTACK, 0)  # 额外攻击力
+        self.attributes[AttributeID.BASE_DEFENSE] = Attribute(AttributeID.BASE_DEFENSE, 0)  # 基础防御力
+        self.attributes[AttributeID.PERTH_DEFENSE] = Attribute(AttributeID.PERTH_DEFENSE, 0)  # 百分比防御力
+        self.attributes[AttributeID.EXTRA_DEFENSE] = Attribute(AttributeID.EXTRA_DEFENSE, 0)  # 额外防御力
+        self.attributes[AttributeID.BASE_SPEED] = Attribute(AttributeID.BASE_SPEED, 0)  # 基础速度
+        self.attributes[AttributeID.PERTH_SPEED] = Attribute(AttributeID.PERTH_SPEED, 0)  # 百分比速度
+        self.attributes[AttributeID.EXTRA_SPEED] = Attribute(AttributeID.EXTRA_SPEED, 0)  # 额外速度
+        self.attributes[AttributeID.CRITICAL_CHANCE] = Attribute(AttributeID.CRITICAL_CHANCE, 0)  # 暴击
+        self.attributes[AttributeID.CRITICAL_DAMAGE] = Attribute(AttributeID.CRITICAL_DAMAGE, 0)  # 暴击伤害
+        self.attributes[AttributeID.BREAK_ATTACK] = Attribute(AttributeID.BREAK_ATTACK, 0)  # 击破特攻
+        self.attributes[AttributeID.HEAL_BONUS] = Attribute(AttributeID.HEAL_BONUS, 0)  # 治疗量加成
+        self.attributes[AttributeID.ENERGY_LIMIT] = Attribute(AttributeID.ENERGY_LIMIT, 0)  # 能量上限
+        self.attributes[AttributeID.ENERGY_RECOVERY] = Attribute(AttributeID.ENERGY_RECOVERY, 0)  # 能量恢复效率
+        self.attributes[AttributeID.CURRENT_ENERGY] = Attribute(AttributeID.CURRENT_ENERGY, 0)  # 当前能量
+        self.attributes[AttributeID.EFFECT_HIT] = Attribute(AttributeID.EFFECT_HIT, 0)  # 效果命中
+        self.attributes[AttributeID.EFFECT_RESIST] = Attribute(AttributeID.EFFECT_RESIST, 0)  # 效果抵抗
+        self.attributes[AttributeID.ATTRIBUTE_DAMAGE] = Attribute(AttributeID.ATTRIBUTE_DAMAGE, 0)  # 属性伤害提高
+        self.attributes[AttributeID.DAMAGE_INCREASE] = Attribute(AttributeID.DAMAGE_INCREASE, 0)  # 增伤
+        self.attributes[AttributeID.ADDITIONAL_DAMAGE] = Attribute(AttributeID.ADDITIONAL_DAMAGE, 0)  # 追加伤害增伤
+        self.attributes[AttributeID.STACK] = Attribute(AttributeID.STACK, 0)  # 命座
 
 
 @dataclass
 class Character:
-    """
-    name, rare, level, base_attributes, relic_attributes
-    """
-    name: str
-    rare: Rare
-    level: int
-    basic_attributes: Attributes
-    relic_attributes: Attributes
-    attributes: Attributes = field(init=False)
+    id: CharacterID
+    attributes: AttributeList = field(init=False)
+    buff_list: BuffGroup = field(init=False)
 
     def __post_init__(self):
-        self.dmg_up = 0
-        self.cut = 0
+        self.attributes = AttributeList()
         self.buff_list = BuffGroup()
-        self.attributes = self.basic_attributes + self.relic_attributes
 
-    def update_buff(self):
-        "每t更新buff状态"
+    def get_attr(self, id):
+        return self.attributes.attributes[id]
+    
+    def increase_attr(self, id, value):
+        old_value = self.get_attr(id)
+        self.set_attr(id, old_value+value)
+    
+    def set_attr(self, id, value):
+        self.attributes.attributes[id] = value
 
-        for buff in self.buff_list:
-            buff.ttl -= 1
-            if buff.ttl == 0:
-                self.remove_buff(buff)
+    def sub_attr(self, id, value):
+        self.attributes.attributes[id] -= value
 
-    def add_buff(self, buff: Buff):
-        "为角色附加buff"
-
-        if self.buff_list.add_buff(buff):
-            match buff.buff_type:
-                case BuffType.ATKUP:
-                    self.attributes.atk += buff.buff_num
-                case BuffType.DEFUP:
-                    self.attributes.deff += buff.buff_num
-                case BuffType.SPEEDUP:
-                    self.attributes.speed += buff.buff_num
-                case BuffType.DMGUP:
-                    self.dmg_up += buff.buff_num
-                case BuffType.CUT:
-                    self.cut += buff.buff_num
-
-    def remove_buff(self, buff: Buff):
-        "删除buff"
-
-        match buff.buff_type:
-            case BuffType.ATKUP:
-                self.attributes.atk -= buff.buff_num
-            case BuffType.DEFUP:
-                self.attributes.deff -= buff.buff_num
-            case BuffType.SPEEDUP:
-                self.attributes.speed -= buff.buff_num
-            case BuffType.DMGUP:
-                self.dmg_up -= buff.buff_num
-            case BuffType.CUT:
-                self.cut -= buff.buff_num
-
-        self.buff_list.remove_buff(buff)
+    def get_atk(self):
+        atk = self.get_attr(AttributeID.BASE_ATTACK)*(1000+self.get_attr(AttributeID.PERTH_ATTACK))/1000+self.get_attr(AttributeID.EXTRA_ATTACK)
+        return atk
+    
+    def get_speed(self):
+        speed = self.get_attr(AttributeID.BASE_SPEED)*(1000+self.get_attr(AttributeID.PERTH_SPEED))/1000+self.get_attr(AttributeID.EXTRA_SPEED)
+        return speed
 
 
-def character_factory():
-    chara_list = []
 
-    def init_basic_attribute(row):
-        attri_list = [row["白字生命"], row["白字攻击"], row["白字防御"],
-                      row["白字速度"], 0, 0, 0, 0, row["能量上限"], 0, 0, 0, 0]
+def character_list_factory():
+    charaters = []
 
-        return Attributes(*attri_list)
-
-    def init_relic_attribute(row):
-        attri_list = [row["绿字生命"], row["绿字攻击"], row["绿字防御"], row["绿字速度"],
-                      row["暴击率"], row["暴击伤害"], row["击破特攻"], row["治疗加成"],
-                      0, row["能量恢复"], row["效果命中"], row["效果抵抗"], row["元素伤害"]]
-
-        return Attributes(*attri_list)
-
-    with open("./data.csv", newline='') as csv_file:
-        reader = csv.DictReader(csv_file)
+    with open("./character.csv",newline='',encoding='utf-8') as file:
+        reader = csv.reader(file)
+        header = next(reader)
 
         for row in reader:
-            args = []
-            args.append(row["角色名"])
-            match row["星级"]:
-                case 4:
-                    args.append(Rare.SR)
-                case 5:
-                    args.append(Rare.SSR)
-            args.append(init_basic_attribute(row))
-            args.append(init_relic_attribute(row))
-            chara_list.append(Character(*args))
+            chara = Character(CharacterID(row[0]))
 
-    return chara_list
+            for i in range(1,len(header)):
+                attr_id = AttributeID(header[i])
+                attr_value = int(row[i])
+
+                if attr_id in chara.attributes.attributes:
+                    chara.set_attr(attr_id,int(attr_value))
+
+            charaters.append(chara)
+
+    return charaters
+
+
+character_list = character_list_factory()
